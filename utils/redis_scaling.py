@@ -34,9 +34,9 @@ def check_frequency(freq, cur_time, enable=True):
         return True
     if freq == '1 min' and cur_time.second < 30:
         return True
-    if freq == '5 min' and cur_time.minute % 5 == 0:
+    if freq == '5 min' and cur_time.minute % 5 == 0 and cur_time.second < 30:
         return True
-    if freq == '10 min' and cur_time.minute % 10 == 0:
+    if freq == '10 min' and cur_time.minute % 10 == 0 and cur_time.second < 30:
         return True
     return False
     
@@ -88,7 +88,7 @@ def collect_metrics(redissetting_object, redis_inst_dict=REDIS_INST_DICT):
         redis_metric.save()
     except Exception as e:
         get_redis_instances(REDIS_INST_DICT)
-        print("Except:", e)
+        print(e)
         mail_admins("Exception in Redis Health Check schedular", traceback.format_exc())
     return
 
@@ -156,8 +156,13 @@ def redis_auto_scale(redissetting_object):
     rso = redissetting_object
     redis_info = hi.get_addon_info(rso.app_name, rso.redis_heroku_name)
     addon_id = redis_info['addon_id']
+    if rso.current_plan.plan_name != redis_info['addon_plan']:
+        rso.current_plan = RedisPlan.objects.get(
+                service_name=redis_info['addon_service'],
+                plan_name=redis_info['addon_plan'])
+        rso.save()
 
-    ft = now() - datetime.timedelta(minutes=int(rso.scaling_rate.split()[0]))
+    ft = now() - datetime.timedelta(minutes=int(rso.scaling_rate.split()[0])*2)
     rms = RedisMetric.objects.filter(redis_fk=rso, sts__gte=ft).order_by('-sts')
     avg_mem = rms.aggregate(Avg('percentage_memory'))['percentage_memory__avg']
     avg_conn = rms.aggregate(Avg('percentage_connections'))['percentage_connections__avg']
@@ -183,15 +188,16 @@ def redis_auto_scale(redissetting_object):
 
         result = hi.change_addon_plan(rso.app_name, addon_id, new_plan.plan_name)
         if (not result)  and (rso.notification_policies.filter(notification_rule='on_failure')):
-            sub = 'SOS ' + str(rso.app_name) + ': Redis Upgrade required'
+            sub = "FAILURE: Redis Autoscaling"
             msg = "Upgrade is required for {0} in {1}. But could not be done through heroku API. Heroku API limit might have reached. Please upgrade manually.".format(
                     rso.redis_name, rso.app_name)
             send_email(sub, msg)
             return
 
         # Store action to latest log and send mail
-        rms[0].action_performed = 'Upgrade'
-        rms[0].save()
+        rm = rms[0]
+        rm.action_performed = 'Upgrade'
+        rm.save()
         rso.current_plan = new_plan
         rso.save()
         if rso.notification_policies.filter(notification_rule='on_success'):
@@ -212,7 +218,8 @@ def redis_auto_scale(redissetting_object):
     down_plan = get_next_plan_for_scale(rso.current_plan, scale=0, source=None)
     if not down_plan:
         return
-    downgrade_allowed = check_downgrade_allowed(avg_conn, avg_mem, down_plan, rso.current_plan)
+    downgrade_allowed = check_downgrade_allowed(avg_conn, avg_mem, down_plan, rso.current_plan,
+                                                rso.avg_connection_percent, rso.avg_memory_percent)
     if not downgrade_allowed:
         print('If we downgrade, either connection limit or memory limit would be exceeded.')
         return
@@ -220,19 +227,20 @@ def redis_auto_scale(redissetting_object):
     # Scale down redis
     result = hi.change_addon_plan(rso.app_name, addon_id, down_plan.plan_name)
     if (not result) and (rso.notification_policies.filter(notification_rule='on_failure')):
-        sub = str(rso.app_name) + ': Redis Downgrade required'
+        sub = "FAILURE: Redis Autoscaling"
         msg = "Downgrade is required for {0} in {1}. But could not be done through heroku API. Heroku API limit might have reached. Please downgrade manually.".format(
                 rso.redis_name, rso.app_name)
         send_email(sub, msg)
         return
 
     # Store action to latest log and send mail
-    rms[0].action_performed = 'Downgrade'
-    rms[0].save()
+    rm = rms[0]
+    rm.action_performed = 'Downgrade'
+    rm.save()
     rso.current_plan = down_plan
     rso.save()
     if rso.notification_policies.filter(notification_rule='on_success'):
         msg = "In {0} app, Redis plan for {1} is downgraded to '{2}'." .format(
-                      rso.app_name, rso.redis_name, new_plan.plan_name)
+                      rso.app_name, rso.redis_name, down_plan.plan_name)
         send_email("SUCCESS: Redis Autoscaling", msg)
     return

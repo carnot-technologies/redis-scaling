@@ -23,6 +23,7 @@ def add_redis_settings():
     redis_name = input("Provide a unique name to your redis instance: ")
     heroku_app = input("Enter the name of heroku app to which redis is attached: ")
     redis_heroku_name = input("Enter the redis attchement url name provided by Heroku: ")
+    print("\nMetrics Configuration:")
     metric_rate = input("Select rate of metric collection (30 sec / 1 min / 5 min): ")
     if metric_rate not in ['30 sec', '1 min', '5 min']:
         print("Input rate of metric collection from given options")
@@ -32,6 +33,7 @@ def add_redis_settings():
     avg_mem_percent = input("Enter the average memory percentage to be maintained: ")
     scaling_enable = input("Enable redis auto-scaling? (y/n): ")
     scaling_enable = int(scaling_enable == 'y')
+    print("\nNotification Configuratin")
     alarm_notif = input("Select notification rule:\n" +
                         "1. On threshold breach [y/n]: ")
     alarm_notif = int(alarm_notif == 'y')
@@ -41,6 +43,7 @@ def add_redis_settings():
         failure_notif = input("3. On scaling failure [y/n]: ")
         success_notif = int(success_notif == 'y')
         failure_notif = int(failure_notif == 'y')
+    print("\nScaling Configuration")
 
     rs, created = RedisSetting.objects.get_or_create(redis_name=redis_name)
     rs.app_name = heroku_app
@@ -63,8 +66,15 @@ def add_redis_settings():
     min_plan = input("Input min plan threshold for scaling. Example rediscloud:30. ")
     max_plan = input("Input max plan threshold for scaling. Example heroku-redis:premium-5. ")
     rs.scaling_rate = scaling_rate
-    rs.min_plan = min_plan
-    rs.max_plan = max_plan
+    print("\n")
+    rps = RedisPlan.objects.filter(plan_name__contains=min_plan).order_by('mem_limit')
+    if rps:
+        rs.min_plan = rps[0]
+        print(str(rps[0].plan_name) + " is set as the minimum allowed plan")
+    rps = RedisPlan.objects.filter(plan_name__contains=max_plan).order_by('-mem_limit')
+    if rps:
+        rs.max_plan = rps[0]
+        print(str(rps[0].plan_name) + " is set as the maximum allowed plan")
     rs.save()
     if alarm_notif:
         rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_alarm'))

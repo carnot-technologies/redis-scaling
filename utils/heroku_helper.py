@@ -59,7 +59,7 @@ class HerokuInterface(object):
                       'addon_plan': addon_plan, 'addon_service': addon_service}
         return addon_info
 
-    def change_addon_plan(app_name, addon_id, plan):
+    def change_addon_plan(self, app_name, addon_id, plan):
         url = heroku_base_url + '/apps/' + app_name + '/addons/' + addon_id
         payload = {"plan": plan}
         res = requests.patch(url, headers=HerokuInterface.request_header,
