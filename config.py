@@ -7,7 +7,6 @@ EMAIL_HOST = os.environ.get('EMAIL_HOST')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-EMAIL_USE_TLS = bool(int(os.environ.get('EMAIL_USE_TLS', 1)))
 SERVER_EMAIL = os.environ.get('SERVER_EMAIL')
 RECIPIENTS = os.environ.get('RECIPIENTS').split(',') if os.environ.get('RECIPIENTS') else []
 
