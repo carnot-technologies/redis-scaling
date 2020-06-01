@@ -43,9 +43,9 @@ Top reasons for why you must have auto scaling on your redis instances:
 Follow below guidelines to quickly setup this project on your heroku account.
 
 ### Heroku application
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/carnot-technologies/redis-scaling/tree/master)
 
-<details><summary>Application Configuration</summary>  
+<details><summary>Environment Configuration</summary>  
   
 - `HEROKU_API_KEY`: API key for your heroku account
 - `EMAIL_HOST`: Host name for your email 
@@ -60,7 +60,7 @@ Follow below guidelines to quickly setup this project on your heroku account.
 </details>
 
 ### Initialize
-Run `initialize.sh` from console.
+Post deployment `initialize.sh` is run from console.
 This does 3 things:
 1. Applies all DB migrations
 2. Creates superuser for django admin panel
