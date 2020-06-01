@@ -42,6 +42,30 @@
       "required": true,
       "description": "Port where SMTP server is listening"
     },
+    "EMAIL_HOST_USER": {
+      "required": true,
+      "description": "SMTP server host username",
+    },
+    "EMAIL_HOST_PASSWORD": {
+      "description": "SMTP server host password",
+      "required": true
+    },
+    "SERVER_EMAIL": {
+      "required": true,
+      "description": "SMTP server from email",
+    },
+    "RECIPIENTS": {
+      "description": "Comma separated emails of recipients who want to receive notifications",
+    },
+    "ENABLE_EMAILS": {
+      "description": "A global flag to enable / disable email feature",
+    },
+    "EMAIL_PREFIX": {
+      "description": "Notification email subject prefix for possible filter addition",
+    },
+    "N_RETENTION_DAYS": {
+      "description": "Number of days for which metrics need to be retained in database",
+    }
   },
   "image": "heroku/python",
   "addons": [
