@@ -10,6 +10,8 @@
 
 This is a python project to auto scale the redis resources on Heroku platform.
 
+![](https://miro.medium.com/max/656/1*W0hyXlN4H0x0BNK4NwYPTw.gif)
+
 ## Table of content
 
 - [Purpose](#purpose)
@@ -41,13 +43,9 @@ Top reasons for why you must have auto scaling on your redis instances:
 Follow below guidelines to quickly setup this project on your heroku account.
 
 ### Heroku application
-:rocket: Deploy to Heroku
-  
-Create a new application on your [Heroku account](https://dashboard.heroku.com/)
-- Connect master branch of this repositaory to your application
-- Attach a basic postgresql database dyno
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
-<details><summary>Input Application Configuration</summary>  
+<details><summary>Application Configuration</summary>  
   
 - `HEROKU_API_KEY`: API key for your heroku account
 - `EMAIL_HOST`: Host name for your email 
@@ -72,7 +70,7 @@ This does 3 things:
 Run `python add_redis_mon.py` from console
 This will prompt you for all information related to redis instance for which auto scaling needs to be enabled.
 
-![Add Redis Instance to Auto Scaling](/utils/img/add_redis.png?raw=true "Add Redis to AS")
+![Add Redis Instance to Auto Scaling](/utils/img/add_redis.PNG?raw=true "Add Redis to AS")
 
 <details><summary>General Configuration</summary>  
   

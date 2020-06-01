@@ -1,0 +1,76 @@
+{
+  "name": "Redis Auto Scaling",
+  "description": "A simple python project to monitor & scale redis instances",
+  "repository": "https://github.com/carnot-technologies/redis-scaling",
+  "website": "https://github.com/carnot-technologies/redis-scaling",
+  "keywords": ["python", "auto scaling", "redis", "django"],
+  "logo": "https://simpleicons.org/icons/django.svg",
+  "success_url": "/admin",
+  "scripts": {
+    "postdeploy": "bash initialize.sh"
+  },
+  "env": {
+    "HEROKU_API_KEY": {
+      "required": true,
+      "description": "Your heroku account API key used for reading dyno info. You will find your API Key under the account settings page",
+    },
+    "DJANGO_SUPERUSER_USERNAME": {
+      "required": true,
+      "value": "admin",
+      "description": "Username for the admin account. Admin login is required to access the admin interface from where you can manage your alerts"
+    },
+    "DJANGO_SUPERUSER_PASSWORD": {
+      "required": true,
+      "value": "abcd12345",
+      "description": "Password for the admin account. Must be at least 8 characters long"
+    },
+    "DJANGO_SUPERUSER_EMAIL": {
+      "required": true,
+      "value": "admin@localhost",
+      "description": "Must be a valid email address. If superuser creation fails, you will have to create one manually"
+    },
+    "EMAIL_HOST": {
+      "description": "Host name of your SMTP server",
+      "required": true
+    },
+    "EMAIL_PORT": {
+      "description": "Port where SMTP server is listening",
+      "required": true
+    },
+    "EMAIL_HOST_USER": {
+      "required": true,
+      "description": "SMTP server host username",
+    },
+    "EMAIL_HOST_PASSWORD": {
+      "description": "SMTP server host password",
+      "required": true
+    },
+    "SERVER_EMAIL": {
+      "required": true,
+      "description": "SMTP server from email",
+    },
+    "RECIPIENTS": {
+      "description": "Comma separated emails of recipients who want to receive notifications",
+    },
+    "ENABLE_EMAILS": {
+      "description": "A global flag to enable / disable email feature",
+    },
+    "EMAIL_PREFIX": {
+      "description": "Notification email subject prefix for possible filter addition",
+    },
+    "N_RETENTION_DAYS": {
+      "description": "Number of days for which metrics need to be retained in database",
+    },
+  },
+  "image": "heroku/python",
+  "addons": [
+    {
+      "plan": "heroku-postgresql",
+    }
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ]
+}
