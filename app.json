@@ -1,9 +1,14 @@
 {
   "name": "Redis Auto Scaling",
   "description": "A simple python project to monitor & scale redis instances",
-  "repository": "https://github.com/carnot-technologies/redis-scaling",
+  "keywords": [
+    "scaling",
+    "python",
+    "django",
+    "redis"
+  ],
   "website": "https://github.com/carnot-technologies/redis-scaling",
-  "keywords": ["python", "auto scaling", "redis", "django"],
+  "repository": "https://github.com/carnot-technologies/redis-scaling",
   "logo": "https://simpleicons.org/icons/django.svg",
   "success_url": "/admin",
   "scripts": {
@@ -12,7 +17,7 @@
   "image": "heroku/python",
   "addons": [
     {
-      "plan": "heroku-postgresql",
+      "plan": "heroku-postgresql:hobby-dev"
     }
   ]
 }
