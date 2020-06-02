@@ -70,7 +70,7 @@ This does 3 things:
 Run `python add_redis_mon.py` from console
 This will prompt you for all information related to redis instance for which auto scaling needs to be enabled.
 
-![Add Redis Instance to Auto Scaling](/utils/img/add_redis.PNG?raw=true "Add Redis to AS")
+![Add Redis Instance to Auto Scaling](http://g.recordit.co/48cmiDjNm7.gif)
 
 <details><summary>General Configuration</summary>  
   
