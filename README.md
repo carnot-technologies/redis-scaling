@@ -20,10 +20,13 @@ This is a python project to auto scale the redis resources on Heroku platform.
   - [Heroku Application](#heroku-application)
   - [Initialization](#initialize)
   - [Redis Configuration](#redis-configuration)
+- [Notes](#notes)
+- [FAQs](#faqs)
 
 ## Purpose
 [![start with why](https://img.shields.io/badge/start%20with-why%3F-brightgreen.svg?style=flat)](http://www.ted.com/talks/simon_sinek_how_great_leaders_inspire_action)   
 
+In many applications, redis is used for queuing data instead of just caching data. In such applications, redis instances are more susceptible to incoming load.   
 Having redis auto scaling would avoid many SOS situations that usually arise during peak traffic while giving you complete control over the way you want to scale.   
 
 Top reasons for why you must have auto scaling on your redis instances:
@@ -70,7 +73,7 @@ This does 3 things:
 Run `python add_redis_mon.py` from console
 This will prompt you for all information related to redis instance for which auto scaling needs to be enabled.
 
-![Add Redis Instance to Auto Scaling](/utils/img/add_redis.PNG?raw=true "Add Redis to AS")
+![Add Redis Instance to Auto Scaling](http://g.recordit.co/48cmiDjNm7.gif)
 
 <details><summary>General Configuration</summary>  
   
@@ -100,3 +103,36 @@ This will prompt you for all information related to redis instance for which aut
 - `Scaling Success` - Email notification whenever a successful scaling action is performed   
 - `Scaling Failure` - Email notification whenever there is a failure in scaling action   
 </details>
+
+## Notes
+- **Compatible with Rediscloud and Heroku-Redis**    
+This project has been tested & verified for both Rediscloud and Heroku-Redis providers.   
+In theroy, it will also work for other service providers, if you add the list of plans & details for the particular provider.
+  <details><summary>Steps</summary>  
+  
+   - Create new plan entries to logs_redisplan table
+   - Add plan_name that Heroku identifies in its CLI
+   - Add memory limit in MB
+   - Add connection limit (If inifinite, add -1)
+   - Add cost per month for reference
+</details>
+  
+- **Heroku API limit**   
+Heroku limits the API calls to 4500 / hour which puts a limit to the number of redises that can be managed through this project.   
+Here is a summary of API calls made
+  ```
+  # static calls = # server restarts + # new redis instances configured
+  # periodic calls every hour = Sum ( (60/scaling-freq in min) + # scaling actions) over all scaling-enabled redis instances
+  ```
+  If we exclude the static and less frequent scaling actions, the max number of redis instances that can be supported by this project is given by below formula.  
+  ```
+  Max number of redis instances = 4500 / ( 60 / Avg scaling-frequency in min )
+  ```
+  For example, if all your redis instances are configured with a scaling frequncy of 10-min, you can have a maximum of 750 redis instances enabled for scaling. Instead, if the frequency is 1-min, you can have 75 redis instances enabled for scaling
+   
+## FAQs
+:question: **How should I set this project up locally?**   
+To setup the project locally, follow this [reference guide](https://github.com/carnot-technologies/redis-scaling/wiki/Local-Setup)
+
+:question: **My redis instance limit is getting exceeded due to Heroku API limit. How can I tackle it while still managing all the redis instances I want?**   
+Although we predict that the limit on number of redis instances is large enough, you might still be in a need to manage more redis instances. In such a case, a simple solution is to create another Heroku API key from other team member's account. Deploy another heroku app with this repo and use the new key. Add all the redis instances above the limit, to this new project and voila! You have just doubled your limit!
