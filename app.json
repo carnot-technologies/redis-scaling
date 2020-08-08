@@ -34,6 +34,11 @@
       "value": "admin@localhost",
       "description": "Must be a valid email address. If superuser creation fails, you will have to create one manually"
     },
+    "DJANGO_SETTINGS_MODULE": {
+      "required": true,
+      "value": "redisscale.settings",
+      "description": "Django settings file"
+    },
     "EMAIL_HOST": {
       "required": true,
       "description": "Host name of your SMTP server"
