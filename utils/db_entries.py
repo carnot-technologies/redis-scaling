@@ -67,11 +67,15 @@ def add_redis_settings():
     max_plan = input("Input max plan threshold for scaling. Example heroku-redis:premium-5. ")
     rs.scaling_rate = scaling_rate
     print("\n")
-    rps = RedisPlan.objects.filter(plan_name__contains=min_plan).order_by('mem_limit')
+    rps = RedisPlan.objects.filter(plan_name=min_plan).order_by('mem_limit')
+    if not rps:
+        rps = RedisPlan.objects.filter(plan_name__contains=min_plan).order_by('mem_limit')
     if rps:
         rs.min_plan = rps[0]
         print(str(rps[0].plan_name) + " is set as the minimum allowed plan")
-    rps = RedisPlan.objects.filter(plan_name__contains=max_plan).order_by('-mem_limit')
+    rps = RedisPlan.objects.filter(plan_name=max_plan).order_by('-mem_limit')
+    if not rps:
+        rps = RedisPlan.objects.filter(plan_name__contains=max_plan).order_by('-mem_limit')
     if rps:
         rs.max_plan = rps[0]
         print(str(rps[0].plan_name) + " is set as the maximum allowed plan")
