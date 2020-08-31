@@ -17,9 +17,9 @@ def get_redis_instances(REDIS_INST_DICT):
     for rs in rss:
         try:
             url = hi.get_env_var_value(rs.app_name, rs.redis_heroku_name)
-            result = parse.urlparse(url)
-            REDIS_INST_DICT[rs.redis_name] = redis.Redis(host=result.hostname,
-                                                         port=result.port, password=result.password)
+            url_res = parse.urlparse(url)
+            REDIS_INST_DICT[rs.redis_name] = redis.Redis(host=url_res.hostname,
+                                                         port=url_res.port, password=url_res.password)
         except Exception as e:
             print(e)
             mail_admins('Exception in connecting to redis instance',
