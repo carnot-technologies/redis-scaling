@@ -6,6 +6,7 @@ from utils.heroku_helper import HerokuInterface
 from utils.mail_helper import mail_admins, send_email
 from django.utils.timezone import now
 from django.db.models import Q, Avg
+from urllib import parse
 
 hi = HerokuInterface()
 REDIS_INST_DICT = {}
@@ -16,7 +17,9 @@ def get_redis_instances(REDIS_INST_DICT):
     for rs in rss:
         try:
             url = hi.get_env_var_value(rs.app_name, rs.redis_heroku_name)
-            REDIS_INST_DICT[rs.redis_name] = redis.from_url(url)
+            url_res = parse.urlparse(url)
+            REDIS_INST_DICT[rs.redis_name] = redis.Redis(host=url_res.hostname,
+                                                         port=url_res.port, password=url_res.password)
         except Exception as e:
             print(e)
             mail_admins('Exception in connecting to redis instance',
