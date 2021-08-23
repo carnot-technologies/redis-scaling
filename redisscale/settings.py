@@ -126,3 +126,6 @@ STATIC_URL = '/static/'
 
 # Activate Django-Heroku.
 django_heroku.settings(locals())
+
+SUBSCRIPTION_ID = os.environ.get("SUBSCRIPTION_ID","26345717-b4dd-4f5c-876d-29fcb069cd64")
+GROUP_NAME = os.environ.get("GROUP_NAME",'simha-internal')

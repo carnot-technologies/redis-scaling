@@ -3,12 +3,15 @@ import redis
 import traceback
 from logs.models import RedisMetric, RedisSetting, RedisPlan
 from utils.heroku_helper import HerokuInterface
+from utils.azure_helper import AzureInterface
 from utils.mail_helper import mail_admins, send_email
 from django.utils.timezone import now
 from django.db.models import Q, Avg
 from urllib import parse
 
 hi = HerokuInterface()
+az = AzureInterface()
+
 REDIS_INST_DICT = {}
 
 
@@ -16,10 +19,13 @@ def get_redis_instances(REDIS_INST_DICT):
     rss = RedisSetting.objects.all()
     for rs in rss:
         try:
-            url = hi.get_env_var_value(rs.app_name, rs.redis_heroku_name)
-            url_res = parse.urlparse(url)
-            REDIS_INST_DICT[rs.redis_name] = redis.Redis(host=url_res.hostname,
-                                                         port=url_res.port, password=url_res.password)
+            if rs.current_plan.service_name!="Azure":
+                url = hi.get_env_var_value(rs.app_name, rs.redis_heroku_name)
+                url_res = parse.urlparse(url)
+                REDIS_INST_DICT[rs.redis_name] = redis.Redis(host=url_res.hostname,
+                                                            port=url_res.port, password=url_res.password)
+            else:
+                REDIS_INST_DICT[rs.redis_name] = redis.Redis(**az.get_app_details(rs))
         except Exception as e:
             print(e)
             mail_admins('Exception in connecting to redis instance',
@@ -49,21 +55,22 @@ def collect_metrics(redissetting_object, redis_inst_dict=REDIS_INST_DICT):
         rso = redissetting_object
         redis_name = rso.redis_name
         current_plan = rso.current_plan
-
+        redis_provider = rso.redis_heroku_name.split(",")[0] #Azure/RedisCloud
+        
         # get instance from dictionary. Do not create new instance each time
         if (not redis_inst_dict) or (redis_name not in redis_inst_dict) or (not redis_inst_dict.get(redis_name)):
             # Reload instance dict if instance not found
             get_redis_instances(REDIS_INST_DICT)
             return
 
+        
         if not current_plan:
-            redis_info = hi.get_addon_info(rso.app_name, rso.redis_heroku_name)
+            redis_info = hi.get_addon_info(rso.app_name, rso.redis_heroku_name) if redis_provider!="Azure" else az.get_redis_configuration(rso.redis_name)
             rso.current_plan = RedisPlan.objects.get(
                 service_name=redis_info['addon_service'],
                 plan_name=redis_info['addon_plan'])
             rso.save()
             current_plan = rso.current_plan
-
         r = redis_inst_dict.get(redis_name)
 
         # Get plan's limits
@@ -157,8 +164,11 @@ def check_downgrade_allowed(avg_conn, avg_mem, down_plan, curr_plan,
 
 def redis_auto_scale(redissetting_object):
     rso = redissetting_object
-    redis_info = hi.get_addon_info(rso.app_name, rso.redis_heroku_name)
+    redis_provider = "Azure" if rso.redis_heroku_name.split(',')[0].capitalize()=="Azure" else "Heroku"
+
+    redis_info = hi.get_addon_info(rso.app_name, rso.redis_heroku_name) if redis_provider!="Azure" else az.get_redis_configuration(rso.redis_name)
     addon_id = redis_info['addon_id']
+    
     if rso.current_plan.plan_name != redis_info['addon_plan']:
         rso.current_plan = RedisPlan.objects.get(
                 service_name=redis_info['addon_service'],
@@ -189,7 +199,7 @@ def redis_auto_scale(redissetting_object):
         source = 'mem' if mem_upgrade_reqd else 'conn'
         new_plan = get_next_plan_for_scale(rso.current_plan, scale=1, source=source)
 
-        result = hi.change_addon_plan(rso.app_name, addon_id, new_plan.plan_name)
+        result = hi.change_addon_plan(rso.app_name, addon_id, new_plan.plan_name) if redis_provider=="Azure" else az.update_redis_plan(rso.redis_name,rso.current_plan.plan_name)
         if (not result)  and (rso.notification_policies.filter(notification_rule='on_failure')):
             sub = "FAILURE: Redis Autoscaling"
             msg = "Upgrade is required for {0} in {1}. But could not be done through heroku API. Heroku API limit might have reached. Please upgrade manually.".format(
@@ -228,7 +238,7 @@ def redis_auto_scale(redissetting_object):
         return
 
     # Scale down redis
-    result = hi.change_addon_plan(rso.app_name, addon_id, down_plan.plan_name)
+    result = hi.change_addon_plan(rso.app_name, addon_id, down_plan.plan_name) if redis_provider!="Azure" else az.update_redis_plan(rso.redis_name,down_plan.plan_name)
     if (not result) and (rso.notification_policies.filter(notification_rule='on_failure')):
         sub = "FAILURE: Redis Autoscaling"
         msg = "Downgrade is required for {0} in {1}. But could not be done through heroku API. Heroku API limit might have reached. Please downgrade manually.".format(

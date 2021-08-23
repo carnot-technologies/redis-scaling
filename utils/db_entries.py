@@ -20,69 +20,147 @@ def static_settings():
 
 
 def add_redis_settings():
-    redis_name = input("Provide a unique name to your redis instance: ")
-    heroku_app = input("Enter the name of heroku app to which redis is attached: ")
-    redis_heroku_name = input("Enter the redis attchement url name provided by Heroku: ")
-    print("\nMetrics Configuration:")
-    metric_rate = input("Select rate of metric collection (30 sec / 1 min / 5 min): ")
-    if metric_rate not in ['30 sec', '1 min', '5 min']:
-        print("Input rate of metric collection from given options")
+    redis_provider = input("Select Redis provider: \t Valid values->Azure,Other")
+    if redis_provider.lower() not in ['azure','other']:
+        print("Invalid redis provider value")
         return
+    
+    if redis_provider.lower()=="other":
+        redis_name = input("Provide a unique name to your redis instance: ")
+        heroku_app = input("Enter the name of heroku app to which redis is attached: ")
+        redis_heroku_name = input("Enter the redis attachement url name provided by Heroku: ")
+        print("\nMetrics Configuration:")
+        metric_rate = input("Select rate of metric collection (30 sec / 1 min / 5 min): ")
+        if metric_rate not in ['30 sec', '1 min', '5 min']:
+            print("Input rate of metric collection from given options")
+            return
 
-    avg_conn_percent = input("Enter the average connection percentage to be maintained: ")
-    avg_mem_percent = input("Enter the average memory percentage to be maintained: ")
-    scaling_enable = input("Enable redis auto-scaling? (y/n): ")
-    scaling_enable = int(scaling_enable == 'y')
-    print("\nNotification Configuratin")
-    alarm_notif = input("Select notification rule:\n" +
-                        "1. On threshold breach [y/n]: ")
-    alarm_notif = int(alarm_notif == 'y')
-    success_notif = failure_notif = 0
-    if scaling_enable:
-        success_notif = input("2. On scaling success [y/n]: ")
-        failure_notif = input("3. On scaling failure [y/n]: ")
-        success_notif = int(success_notif == 'y')
-        failure_notif = int(failure_notif == 'y')
-    print("\nScaling Configuration")
+        avg_conn_percent = input("Enter the average connection percentage to be maintained: ")
+        avg_mem_percent = input("Enter the average memory percentage to be maintained: ")
+        scaling_enable = input("Enable redis auto-scaling? (y/n): ")
+        scaling_enable = int(scaling_enable == 'y')
+        print("\nNotification Configuratin")
+        alarm_notif = input("Select notification rule:\n" +
+                            "1. On threshold breach [y/n]: ")
+        alarm_notif = int(alarm_notif == 'y')
+        success_notif = failure_notif = 0
+        if scaling_enable:
+            success_notif = input("2. On scaling success [y/n]: ")
+            failure_notif = input("3. On scaling failure [y/n]: ")
+            success_notif = int(success_notif == 'y')
+            failure_notif = int(failure_notif == 'y')
+        print("\nScaling Configuration")
 
-    rs, created = RedisSetting.objects.get_or_create(redis_name=redis_name)
-    rs.app_name = heroku_app
-    rs.redis_heroku_name = redis_heroku_name
-    rs.metric_rate = metric_rate
-    rs.avg_connection_percent = avg_conn_percent
-    rs.avg_memory_percent = avg_mem_percent
-    rs.enable_scaling = scaling_enable
+        rs, created = RedisSetting.objects.get_or_create(redis_name=redis_name)
+        rs.app_name = heroku_app
+        rs.redis_heroku_name = redis_heroku_name
+        rs.metric_rate = metric_rate
+        rs.avg_connection_percent = avg_conn_percent
+        rs.avg_memory_percent = avg_mem_percent
+        rs.enable_scaling = scaling_enable
 
-    if not scaling_enable:
+        if not scaling_enable:
+            rs.save()
+            if alarm_notif:
+                rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_alarm'))
+            return
+
+        scaling_rate = input("Select rate of scaling check (1 min / 5 min / 10 min): ")
+        if scaling_rate not in ['1 min', '5 min', '10 min']:
+            print("Input rate of scaling from given options")
+            return
+        min_plan = input("Input min plan threshold for scaling. Example rediscloud:30. ")
+        max_plan = input("Input max plan threshold for scaling. Example heroku-redis:premium-5. ")
+        rs.scaling_rate = scaling_rate
+        print("\n")
+        rps = RedisPlan.objects.filter(plan_name=min_plan).order_by('mem_limit')
+        if not rps:
+            rps = RedisPlan.objects.filter(plan_name__contains=min_plan).order_by('mem_limit')
+        if rps:
+            rs.min_plan = rps[0]
+            print(str(rps[0].plan_name) + " is set as the minimum allowed plan")
+        rps = RedisPlan.objects.filter(plan_name=max_plan).order_by('-mem_limit')
+        if not rps:
+            rps = RedisPlan.objects.filter(plan_name__contains=max_plan).order_by('-mem_limit')
+        if rps:
+            rs.max_plan = rps[0]
+            print(str(rps[0].plan_name) + " is set as the maximum allowed plan")
         rs.save()
         if alarm_notif:
             rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_alarm'))
-        return
+        if success_notif:
+            rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_success'))
+        if failure_notif:
+            rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_failure'))
+    else:
+        redis_name = input("Provide a unique name to your redis instance: ")
+        heroku_app = redis_name
+        primary_password = input("Enter the primary instance password :")
+        replica_password = input("Enter the replica instance password :")
+        if primary_password.strip()=="" or replica_password.strip()=="":
+            print("Primary and Replica passwords are mandatory fields, cannot be skipped")
+            return
+        redis_heroku_name = "Azure,{},{}".format(primary_password,replica_password)
+        print("\nMetrics Configuration:")
+        metric_rate = input("Select rate of metric collection (30 sec / 1 min / 5 min): ")
+        if metric_rate not in ['30 sec', '1 min', '5 min']:
+            print("Input rate of metric collection from given options")
+            return
 
-    scaling_rate = input("Select rate of scaling check (1 min / 5 min / 10 min): ")
-    if scaling_rate not in ['1 min', '5 min', '10 min']:
-        print("Input rate of scaling from given options")
-        return
-    min_plan = input("Input min plan threshold for scaling. Example rediscloud:30. ")
-    max_plan = input("Input max plan threshold for scaling. Example heroku-redis:premium-5. ")
-    rs.scaling_rate = scaling_rate
-    print("\n")
-    rps = RedisPlan.objects.filter(plan_name=min_plan).order_by('mem_limit')
-    if not rps:
-        rps = RedisPlan.objects.filter(plan_name__contains=min_plan).order_by('mem_limit')
-    if rps:
-        rs.min_plan = rps[0]
-        print(str(rps[0].plan_name) + " is set as the minimum allowed plan")
-    rps = RedisPlan.objects.filter(plan_name=max_plan).order_by('-mem_limit')
-    if not rps:
-        rps = RedisPlan.objects.filter(plan_name__contains=max_plan).order_by('-mem_limit')
-    if rps:
-        rs.max_plan = rps[0]
-        print(str(rps[0].plan_name) + " is set as the maximum allowed plan")
-    rs.save()
-    if alarm_notif:
-        rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_alarm'))
-    if success_notif:
-        rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_success'))
-    if failure_notif:
-        rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_failure'))
+        avg_conn_percent = input("Enter the average connection percentage to be maintained: ")
+        avg_mem_percent = input("Enter the average memory percentage to be maintained: ")
+        scaling_enable = input("Enable redis auto-scaling? (y/n): ")
+        scaling_enable = int(scaling_enable == 'y')
+        print("\nNotification Configuratin")
+        alarm_notif = input("Select notification rule:\n" +
+                            "1. On threshold breach [y/n]: ")
+        alarm_notif = int(alarm_notif == 'y')
+        success_notif = failure_notif = 0
+        if scaling_enable:
+            success_notif = input("2. On scaling success [y/n]: ")
+            failure_notif = input("3. On scaling failure [y/n]: ")
+            success_notif = int(success_notif == 'y')
+            failure_notif = int(failure_notif == 'y')
+        print("\nScaling Configuration")
+
+        rs, created = RedisSetting.objects.get_or_create(redis_name=redis_name)
+        rs.app_name = heroku_app
+        rs.redis_heroku_name = redis_heroku_name
+        rs.metric_rate = metric_rate
+        rs.avg_connection_percent = avg_conn_percent
+        rs.avg_memory_percent = avg_mem_percent
+        rs.enable_scaling = scaling_enable
+
+        if not scaling_enable:
+            rs.save()
+            if alarm_notif:
+                rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_alarm'))
+            return
+
+        scaling_rate = input("Select rate of scaling check (1 min / 5 min / 10 min): ")
+        if scaling_rate not in ['1 min', '5 min', '10 min']:
+            print("Input rate of scaling from given options")
+            return
+        min_plan = input("Input min plan threshold for scaling. Example Standard-C-1 ")
+        max_plan = input("Input max plan threshold for scaling. Example Premium-P-5 ")
+        rs.scaling_rate = scaling_rate
+        print("\n")
+        rps = RedisPlan.objects.filter(plan_name=min_plan).order_by('mem_limit')
+        if not rps:
+            rps = RedisPlan.objects.filter(plan_name__contains=min_plan).order_by('mem_limit')
+        if rps:
+            rs.min_plan = rps[0]
+            print(str(rps[0].plan_name) + " is set as the minimum allowed plan")
+        rps = RedisPlan.objects.filter(plan_name=max_plan).order_by('-mem_limit')
+        if not rps:
+            rps = RedisPlan.objects.filter(plan_name__contains=max_plan).order_by('-mem_limit')
+        if rps:
+            rs.max_plan = rps[0]
+            print(str(rps[0].plan_name) + " is set as the maximum allowed plan")
+        rs.save()
+        if alarm_notif:
+            rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_alarm'))
+        if success_notif:
+            rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_success'))
+        if failure_notif:
+            rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_failure'))
