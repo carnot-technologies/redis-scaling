@@ -30,6 +30,14 @@ class AzureInterface(object):
             AzureInterface.instance = AzureInterface()
         return AzureInterface.instance
     
+    def get_access_keys(self,redis_name):
+        try:
+            password = self.get_instance().redis.list_keys(settings.GROUP_NAME,redis_name).as_dict()['primary_key']
+            return password
+        except Exception as e:
+            print("Exception while fetching redis password",e)
+            return None
+    
     def get_app_details(self,redissetting_instance):
         '''
         This function will return a dict that can be used for redis instance initiation
@@ -37,7 +45,7 @@ class AzureInterface(object):
         '''
         return {"host":HOST_TEMPLATE.format(redissetting_instance.redis_name),
                 "port":NON_SSL_PORT,
-                "password":rs.redis_heroku_name.split(",")[0]}
+                "password":self.get_access_keys(redissetting_instance.redis_name)}
 
     def get_redis_configuration(self,redis_name):
         instance = self.get_instance()
