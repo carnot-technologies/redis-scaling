@@ -51,7 +51,7 @@ class AzureInterface(object):
         instance = self.get_instance()
         data = instance.redis.get(settings.GROUP_NAME,redis_name).as_dict()
         return {"addon_service":"Azure",
-                "addon_plan":"{}-{}-{}".format(data['sku']['name'],data['sku']['family'],data['sku']['capacity'])
+                "addon_plan":"{}-{}-{}".format(data['sku']['name'],data['sku']['family'],data['sku']['capacity']),
                 "addon_id":data['id']}
     
     def update_redis_plan(self,redis_name,redis_plan_string):
