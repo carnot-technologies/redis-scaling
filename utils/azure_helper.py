@@ -6,7 +6,7 @@ import os
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.redis import RedisManagementClient
 from azure.mgmt.redis.models import Sku, RedisUpdateParameters,RedisProperties
-from redisscale.models import RedisSetting
+
 
 HOST_TEMPLATE = "{}.redis.cache.windows.net"
 SSL_PORT = 6380
