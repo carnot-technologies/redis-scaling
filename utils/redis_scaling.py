@@ -199,7 +199,7 @@ def redis_auto_scale(redissetting_object):
         source = 'mem' if mem_upgrade_reqd else 'conn'
         new_plan = get_next_plan_for_scale(rso.current_plan, scale=1, source=source)
 
-        result = hi.change_addon_plan(rso.app_name, addon_id, new_plan.plan_name) if redis_provider=="Azure" else az.update_redis_plan(rso.redis_name,new_plan.plan_name)
+        result = hi.change_addon_plan(rso.app_name, addon_id, new_plan.plan_name) if redis_provider!="Azure" else az.update_redis_plan(rso.redis_name,new_plan.plan_name)
         if (not result)  and (rso.notification_policies.filter(notification_rule='on_failure')):
             sub = "FAILURE: Redis Autoscaling"
             msg = "Upgrade is required for {0} in {1}. But could not be done through heroku API. Heroku API limit might have reached. Please upgrade manually.".format(
