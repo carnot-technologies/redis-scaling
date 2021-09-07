@@ -20,9 +20,17 @@ def static_settings():
 
 
 def add_redis_settings():
+    redis_provider = input("Select Redis provider: \t Valid values->Azure,Other")
+    if redis_provider.lower() not in ['azure','other']:
+        print("Invalid redis provider value")
+        return
+    
     redis_name = input("Provide a unique name to your redis instance: ")
-    heroku_app = input("Enter the name of heroku app to which redis is attached: ")
-    redis_heroku_name = input("Enter the redis attchement url name provided by Heroku: ")
+    heroku_app = input("Enter the name of {} app to which redis is attached: ".format("Azure" if redis_provider.lower()=="azure" else "Heroku"))
+    if redis_provider.lower()!="azure":
+        redis_heroku_name = input("Enter the redis attachement url name provided by Heroku: ")
+    else:
+        redis_heroku_name = "Azure,{}".format(heroku_app)
     print("\nMetrics Configuration:")
     metric_rate = input("Select rate of metric collection (30 sec / 1 min / 5 min): ")
     if metric_rate not in ['30 sec', '1 min', '5 min']:
@@ -63,8 +71,9 @@ def add_redis_settings():
     if scaling_rate not in ['1 min', '5 min', '10 min']:
         print("Input rate of scaling from given options")
         return
-    min_plan = input("Input min plan threshold for scaling. Example rediscloud:30. ")
-    max_plan = input("Input max plan threshold for scaling. Example heroku-redis:premium-5. ")
+    min_plan = input("Input min plan threshold for scaling. Example  {}".format("rediscloud:30." if redis_provider.lower()=="other" else "Standard-C-1"))
+    max_plan = input("Input max plan threshold for scaling. Example {}".format("heroku-redis:premium-5." if redis_provider.lower()=="other" else "Premium-P-5"))
+    
     rs.scaling_rate = scaling_rate
     print("\n")
     rps = RedisPlan.objects.filter(plan_name=min_plan).order_by('mem_limit')
@@ -86,3 +95,4 @@ def add_redis_settings():
         rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_success'))
     if failure_notif:
         rs.notification_policies.add(NotificationPolicy.objects.get(notification_rule='on_failure'))
+    
