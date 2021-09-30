@@ -19,6 +19,13 @@ def get_redis_instances(REDIS_INST_DICT):
     rss = RedisSetting.objects.all()
     for rs in rss:
         try:
+            if not rs.current_plan:
+                redis_provider = rs.redis_heroku_name.split(",")[0] #Azure/RedisCloud
+                redis_info = hi.get_addon_info(rs.app_name, rso.redis_heroku_name) if redis_provider!="Azure" else az.get_redis_configuration(rs.redis_name)
+                rs.current_plan = RedisPlan.objects.get(
+                    service_name=redis_info['addon_service'],
+                    plan_name=redis_info['addon_plan'])
+                rs.save()  
             if rs.current_plan.service_name!="Azure":
                 url = hi.get_env_var_value(rs.app_name, rs.redis_heroku_name)
                 url_res = parse.urlparse(url)
