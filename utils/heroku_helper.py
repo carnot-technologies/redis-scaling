@@ -64,7 +64,11 @@ class HerokuInterface(object):
         payload = {"plan": plan}
         res = requests.patch(url, headers=HerokuInterface.request_header,
                              data=json.dumps(payload))
-        new_id = None
-        if res.status_code == 201:
+        # new_id = None
+        # if res.status_code == 201:
+        try:
             new_id = res.json().get("plan").get("id")
+        except:
+            print(app_name, var_name, res)
+            new_id = None
         return new_id
