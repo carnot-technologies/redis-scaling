@@ -15,7 +15,7 @@ idna==2.7
 numpy==1.26.1
 opt-einsum==3.1.0
 pandas==2.1.1
-psycopg2==2.9.9
+psycopg2==2.8.6
 python-dateutil==2.8.2
 pytz==2020.1
 redis==3.5.2

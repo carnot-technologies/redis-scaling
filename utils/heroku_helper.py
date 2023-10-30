@@ -50,6 +50,8 @@ class HerokuInterface(object):
             for each_addon in resp:
                 if each_addon.get("config_vars")[0] != config_name:
                     continue
+                if each_addon.get('app').get('name') != app_name:
+                    continue
                 addon_id = each_addon.get("id")
                 addon_name = each_addon.get("addon_service").get("name")
                 addon_plan = each_addon.get("plan").get("name")
@@ -69,6 +71,6 @@ class HerokuInterface(object):
         try:
             new_id = res.json().get("plan").get("id")
         except:
-            print(app_name, var_name, res)
+            print(app_name, res)
             new_id = None
         return new_id
