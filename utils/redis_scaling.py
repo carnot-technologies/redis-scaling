@@ -25,7 +25,7 @@ def get_redis_instances(REDIS_INST_DICT):
                 rs.current_plan = RedisPlan.objects.get(
                     service_name=redis_info['addon_service'],
                     plan_name=redis_info['addon_plan'])
-                rs.save()  
+                rs.save()
             if rs.current_plan.service_name!="Azure":
                 url = hi.get_env_var_value(rs.app_name, rs.redis_heroku_name)
                 url_res = parse.urlparse(url)
@@ -55,7 +55,7 @@ def check_frequency(freq, cur_time, enable=True):
     if freq == '10 min' and cur_time.minute % 10 == 0 and cur_time.second < 30:
         return True
     return False
-    
+
 
 def collect_metrics(redissetting_object, redis_inst_dict=REDIS_INST_DICT):
     try:
@@ -63,14 +63,14 @@ def collect_metrics(redissetting_object, redis_inst_dict=REDIS_INST_DICT):
         redis_name = rso.redis_name
         current_plan = rso.current_plan
         redis_provider = rso.redis_heroku_name.split(",")[0] #Azure/RedisCloud
-        
+
         # get instance from dictionary. Do not create new instance each time
         if (not redis_inst_dict) or (redis_name not in redis_inst_dict) or (not redis_inst_dict.get(redis_name)):
             # Reload instance dict if instance not found
             get_redis_instances(REDIS_INST_DICT)
             return
 
-        
+
         if not current_plan:
             redis_info = hi.get_addon_info(rso.app_name, rso.redis_heroku_name) if redis_provider!="Azure" else az.get_redis_configuration(rso.redis_name)
             rso.current_plan = RedisPlan.objects.get(
@@ -175,7 +175,7 @@ def redis_auto_scale(redissetting_object):
 
     redis_info = hi.get_addon_info(rso.app_name, rso.redis_heroku_name) if redis_provider!="Azure" else az.get_redis_configuration(rso.redis_name)
     addon_id = redis_info['addon_id']
-    
+
     if rso.current_plan.plan_name != redis_info['addon_plan']:
         rso.current_plan = RedisPlan.objects.get(
                 service_name=redis_info['addon_service'],
@@ -200,6 +200,7 @@ def redis_auto_scale(redissetting_object):
             sub = 'SOS ' + str(rso.app_name) + ': Redis Upgrade required'
             msg = "Upgrade is required for {0} in {1}. But redis plan is already at the max plan limit".format(
                     rso.redis_name, rso.app_name)
+            print(msg)
             mail_admins(sub, msg)
             return
 
@@ -211,10 +212,14 @@ def redis_auto_scale(redissetting_object):
             sub = "FAILURE: Redis Autoscaling"
             msg = "Upgrade is required for {0} in {1}. But could not be done through heroku API. Heroku API limit might have reached. Please upgrade manually.".format(
                     rso.redis_name, rso.app_name)
+            print(msg)
             send_email(sub, msg)
             return
 
         # Store action to latest log and send mail
+        print(rso.app_name, rso.redis_name, "Upgraded from ", str(rso.current_plan),
+              "to", str(new_plan))
+        print(mem_upgrade_reqd, conn_upgrade_reqd)
         rm = rms[0]
         rm.action_performed = 'Upgrade'
         rm.save()
@@ -231,6 +236,7 @@ def redis_auto_scale(redissetting_object):
         sub = 'Redis downgrade possible'
         msg = "Redis {0} in {1} can be downgraded to a lower plan. But redis plan is already at the min plan limit. Reduce the min plan if you want to save further cost".format(
                 rso.redis_name, rso.app_name)
+        print(msg)
         mail_admins(sub, msg)
         return
 
@@ -251,9 +257,12 @@ def redis_auto_scale(redissetting_object):
         msg = "Downgrade is required for {0} in {1}. But could not be done through heroku API. Heroku API limit might have reached. Please downgrade manually.".format(
                 rso.redis_name, rso.app_name)
         send_email(sub, msg)
+        print(msg)
         return
 
     # Store action to latest log and send mail
+    print(rso.app_name, rso.redis_name, "Downgraded from ", str(rso.current_plan),
+      "to", str(down_plan))
     rm = rms[0]
     rm.action_performed = 'Downgrade'
     rm.save()
